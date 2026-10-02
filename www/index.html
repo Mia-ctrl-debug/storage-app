@@ -1,0 +1,2582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>储物清单</title>
+<style>
+  :root {
+    --bg: #f7f7fb;
+    --card: #ffffff;
+    --text: #1a1d29;
+    --text-muted: #6b7280;
+    --text-light: #9ca3af;
+    --border: #eceef3;
+    --border-strong: #e0e3eb;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --primary-soft: #eff6ff;
+    --primary-grad: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    --danger: #ef4444;
+    --danger-soft: #fef2f2;
+    --warning: #f59e0b;
+    --warning-soft: #fffbeb;
+    --warning-border: #fde68a;
+    --success: #10b981;
+    --success-soft: #ecfdf5;
+    --radius: 16px;
+    --shadow-card: 0 1px 2px rgba(24,30,45,0.04), 0 2px 6px rgba(24,30,45,0.04);
+    --shadow-fab: 0 10px 26px rgba(59,130,246,0.35);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; min-height: 100vh;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  }
+  body.selecting { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+
+  header {
+    position: sticky; top: 0; background: #fff; padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border); z-index: 10;
+  }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  h1 {
+    font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.3px;
+    background: var(--primary-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+  }
+  #stats { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  #stats .stat-danger { color: var(--danger); font-weight: 600; }
+  #stats .stat-warning { color: var(--warning); font-weight: 600; }
+  .header-actions { display: flex; gap: 6px; flex: none; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border);
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--text-muted); cursor: pointer; flex: none;
+    font-family: inherit; transition: background .12s, color .12s, border-color .12s;
+  }
+  .icon-btn:active { background: #f3f4f6; }
+  .icon-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  .search-wrap { position: relative; margin-top: 12px; }
+  .search-wrap::before {
+    content: '🔍'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 13px; opacity: 0.5; pointer-events: none;
+  }
+  #search {
+    width: 100%; padding: 10px 12px 10px 34px; border: 1px solid var(--border);
+    border-radius: 12px; font-size: 14px; background: #f7f8fb; color: var(--text);
+    font-family: inherit; transition: border-color .15s, box-shadow .15s, background .15s;
+    -webkit-appearance: none; appearance: none;
+  }
+  #search:focus { outline: none; background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.14); }
+
+  .filter-bar { display: flex; gap: 6px; margin-top: 10px; }
+  .filter-btn {
+    flex: 1 1 0; min-width: 0;
+    display: flex; align-items: center; justify-content: center; gap: 3px;
+    padding: 9px 8px; border: 1px solid var(--border); border-radius: 10px;
+    background: #fff; color: var(--text-muted); font-size: 12.5px;
+    font-family: inherit; font-weight: 500; cursor: pointer;
+    transition: background-color .15s, border-color .15s, color .15s;
+  }
+  .filter-btn:active { background: #f3f4f6; }
+  .filter-btn.active {
+    background: var(--primary-soft); border-color: #bfdbfe;
+    color: var(--primary); font-weight: 600;
+  }
+  .filter-btn-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .filter-btn-arrow { font-size: 9px; opacity: 0.7; flex: none; }
+
+  .filter-option {
+    display: flex; align-items: center; gap: 8px; padding: 11px 12px;
+    border: none; background: transparent; border-radius: 10px;
+    font-size: 14px; color: var(--text); font-family: inherit;
+    text-align: left; cursor: pointer; transition: background .12s;
+    flex: 1; min-width: 0;
+  }
+  .filter-option:active { background: #f3f4f6; }
+  .filter-option.active { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+  .filter-option-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filter-option-check { flex: none; color: var(--primary); font-weight: 700; font-size: 14px; opacity: 0; }
+  .filter-option.active .filter-option-check { opacity: 1; }
+
+  .filter-row { display: flex; align-items: stretch; margin-bottom: 2px; }
+  .filter-row[data-depth="1"] { padding-left: 18px; }
+  .filter-row[data-depth="2"] { padding-left: 36px; }
+
+  .filter-expand {
+    flex: none; width: 30px; border: none; background: transparent;
+    color: var(--text-light); font-size: 12px; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .18s ease, color .12s;
+    border-radius: 8px; font-family: inherit;
+  }
+  .filter-expand.expanded { transform: rotate(90deg); color: var(--primary); }
+  .filter-expand.empty { visibility: hidden; pointer-events: none; }
+  .filter-expand:active { background: #f3f4f6; }
+
+  .filter-row[data-depth="0"] .filter-option-label { font-weight: 600; }
+  .filter-row[data-depth="1"] .filter-option-label { font-weight: 500; }
+  .filter-row[data-depth="2"] .filter-option-label { font-weight: 400; color: var(--text-muted); }
+  .filter-row[data-depth="2"] .filter-option.active .filter-option-label { color: var(--primary); }
+
+  main { padding: 14px 16px 20px; max-width: 720px; margin: 0 auto; }
+
+  .banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 14px; background: var(--warning-soft); border: 1px solid var(--warning-border);
+    border-radius: 12px; font-size: 13px; color: #92400e; margin-bottom: 14px;
+  }
+  .banner button {
+    padding: 5px 12px; border-radius: 8px; border: 1px solid #f59e0b;
+    background: #fff; color: #92400e; font-size: 13px; font-weight: 600;
+    white-space: nowrap; cursor: pointer;
+  }
+  .banner.hidden { display: none; }
+
+  #alertBox { margin-bottom: 14px; }
+  .alerts-title {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; padding-left: 2px;
+  }
+  .alert-item {
+    display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+    border-radius: 10px; font-size: 13px; margin-bottom: 6px;
+  }
+  .alert-item::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .alert-item.expired { background: var(--danger-soft); color: #991b1b; }
+  .alert-item.expired::before { background: var(--danger); }
+  .alert-item.soon { background: var(--warning-soft); color: #92400e; }
+  .alert-item.soon::before { background: var(--warning); }
+
+  .item-card {
+    position: relative; background: var(--card); border-radius: var(--radius);
+    padding: 14px 14px 14px 18px; margin-bottom: 10px;
+    box-shadow: var(--shadow-card); overflow: hidden;
+    transition: box-shadow .15s;
+    outline: 2px solid transparent; outline-offset: -2px;
+  }
+  .item-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #e5e7eb; }
+  .item-card.status-expired::before { background: var(--danger); }
+  .item-card.status-soon::before { background: var(--warning); }
+  .item-card.status-ok::before { background: var(--success); }
+  .item-card.status-none::before { background: #cbd5e1; }
+  .item-card.collapsed { padding-top: 12px; padding-bottom: 12px; }
+  .item-card.selected { outline-color: var(--primary); background: var(--primary-soft); }
+
+  .item-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 10px; cursor: pointer; user-select: none;
+  }
+  .head-main { flex: 1; min-width: 0; }
+  .item-name {
+    font-size: 15px; font-weight: 600; margin: 0; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .item-meta {
+    font-size: 12px; color: var(--text-muted); margin-top: 3px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .head-right { display: flex; align-items: center; gap: 8px; flex: none; padding-top: 1px; }
+  .chevron {
+    color: var(--text-light); font-size: 11px; line-height: 1;
+    transition: transform .2s ease;
+    width: 20px; height: 20px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    background: #f3f4f6;
+  }
+  .item-card.collapsed .chevron { transform: rotate(-90deg); }
+
+  .item-checkbox {
+    width: 22px; height: 22px; border-radius: 6px;
+    border: 2px solid #d1d5db; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    flex: none; transition: background .12s, border-color .12s;
+    color: #fff; font-size: 14px; font-weight: 700;
+  }
+  .item-checkbox.checked { background: var(--primary); border-color: var(--primary); }
+
+  .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; white-space: nowrap; font-weight: 600; flex: none; }
+  .badge.expired { background: var(--danger-soft); color: #991b1b; }
+  .badge.soon { background: var(--warning-soft); color: #92400e; }
+  .badge.ok { background: var(--success-soft); color: #065f46; }
+  .badge.none { background: #f3f4f6; color: #6b7280; }
+
+  .item-body { overflow: hidden; }
+  .item-card.collapsed .item-body { display: none; }
+
+  .qty-control {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #f7f8fb; border-radius: 12px; padding: 3px;
+    margin-top: 10px;
+  }
+  .btn-qty {
+    width: 32px; height: 32px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 600; line-height: 1;
+    border-radius: 9px; border: none;
+    background: #fff; color: var(--text);
+    cursor: pointer; font-family: inherit;
+    box-shadow: 0 1px 2px rgba(24,30,45,0.06);
+    transition: background .12s, transform .1s, color .12s;
+  }
+  .btn-qty:active { background: var(--primary); color: #fff; transform: scale(0.94); }
+  .qty-value {
+    min-width: 52px; text-align: center;
+    font-size: 15px; font-weight: 600; color: var(--text);
+    padding: 0 4px;
+  }
+  .qty-value small { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-left: 2px; }
+
+  .expiry-row {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 10px; font-size: 13px; color: var(--text-muted);
+  }
+  .expiry-row::before { content: '⏱'; font-size: 13px; opacity: 0.65; }
+  .expiry-row .expiry-label { color: var(--text-light); }
+  .expiry-row .expiry-date { color: var(--text); font-weight: 500; }
+
+  .item-note { font-size: 13px; color: var(--text-muted); margin: 9px 0 0; line-height: 1.45; }
+  .item-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .btn-mini {
+    padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 8px;
+    background: #fff; font-size: 13px; color: var(--text); font-family: inherit;
+    cursor: pointer; transition: background .12s, border-color .12s;
+  }
+  .btn-mini:active { background: #f3f4f6; }
+  .btn-mini.btn-danger { color: var(--danger); border-color: #fecaca; background: #fff; }
+  .btn-mini.btn-danger:active { background: var(--danger-soft); }
+
+  .empty { text-align: center; color: var(--text-light); padding: 60px 20px; font-size: 14px; }
+  .empty-icon { font-size: 44px; margin-bottom: 14px; opacity: 0.7; }
+  .empty-sub { font-size: 13px; margin-top: 6px; }
+
+  .fab {
+    position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom));
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--primary-grad); color: #fff;
+    border: none; font-size: 28px; line-height: 1;
+    box-shadow: var(--shadow-fab); cursor: pointer; z-index: 30;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .12s;
+  }
+  .fab:active { transform: scale(0.93); }
+  .fab.hidden { display: none; }
+
+  .modal {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+    display: flex; align-items: flex-end; justify-content: center; z-index: 100;
+    animation: fadeIn .18s ease;
+  }
+  .modal.hidden { display: none; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .sheet {
+    background: #fff; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto;
+    border-radius: 20px 20px 0 0; padding: 8px 20px calc(20px + env(safe-area-inset-bottom));
+    animation: slideUp .22s cubic-bezier(0.16, 1, 0.3, 1); -webkit-overflow-scrolling: touch;
+    will-change: transform;
+  }
+  .sheet-handle {
+    width: 40px; height: 4px; border-radius: 2px; background: #e5e7eb;
+    margin: 6px auto 14px;
+    cursor: grab;
+  }
+  .sheet h2 { font-size: 17px; font-weight: 700; margin: 0 0 14px; }
+  .sheet h3 {
+    font-size: 13px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.4px; margin: 18px 0 8px;
+  }
+
+  .modal.dialog-center { align-items: center; padding: 24px; z-index: 300; }
+  .modal.dialog-center .sheet {
+    border-radius: 18px; padding: 20px; max-width: 380px; max-height: 80vh;
+    animation: dialogPop .2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes dialogPop {
+    from { opacity: 0; transform: scale(0.94); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .dialog-message { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin: 0; word-break: break-word; }
+  .dialog-input {
+    display: block; width: 100%; margin-top: 14px; padding: 11px 12px;
+    border: 1px solid var(--border-strong); border-radius: 10px;
+    font-size: 15px; font-family: inherit; background: #fff; color: var(--text);
+    -webkit-appearance: none; appearance: none;
+  }
+  .dialog-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.14); }
+
+  /* ============ 数据面板 ============ */
+  .data-stats { text-align: center; color: var(--text-muted); font-size: 13px; margin: -6px 0 18px; }
+  .data-stats strong { color: var(--text); font-weight: 600; }
+
+  .data-tabs {
+    display: flex; gap: 4px; background: #f3f4f6;
+    border-radius: 12px; padding: 4px; margin-bottom: 10px;
+  }
+  .data-tab {
+    flex: 1; padding: 10px 8px; border: none; background: transparent;
+    border-radius: 9px; font-size: 13.5px; font-family: inherit;
+    color: var(--text-muted); cursor: pointer; font-weight: 500;
+    transition: background .15s, color .15s, box-shadow .15s;
+  }
+  .data-tab.active {
+    background: #fff; color: var(--text); font-weight: 600;
+    box-shadow: 0 1px 3px rgba(24,30,45,0.08);
+  }
+  .data-format-hint {
+    font-size: 12px; color: var(--text-muted); text-align: center;
+    margin: 0 0 16px; min-height: 16px;
+  }
+
+  .btn-hero {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 16px; font-size: 16px; font-weight: 600;
+    border-radius: 14px; border: none; cursor: pointer;
+    background: var(--primary); color: #fff; font-family: inherit;
+    transition: background .12s;
+  }
+  .btn-hero:active { background: var(--primary-hover); }
+
+  .export-log {
+    margin-top: 14px;
+    background: #f7f8fb;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .export-log.ok { background: var(--success-soft); color: #065f46; }
+  .export-log.warn { background: var(--warning-soft); color: #92400e; }
+
+  .manual-copy-box {
+    margin-top: 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .manual-copy-summary {
+    padding: 12px 14px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--primary);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .manual-copy-summary::-webkit-details-marker { display: none; }
+  .manual-copy-summary::before {
+    content: '▸';
+    display: inline-block;
+    transition: transform .18s ease;
+    font-size: 11px;
+  }
+  .manual-copy-box[open] .manual-copy-summary::before { transform: rotate(90deg); }
+  .manual-copy-tip {
+    padding: 0 14px 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.55;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+  .manual-copy-tip b { color: var(--text); }
+  .manual-copy-textarea {
+    width: 100%;
+    min-height: 220px;
+    padding: 12px 14px;
+    border: none;
+    border-top: 1px solid var(--border);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    background: #fbfcfe;
+    color: var(--text);
+    -webkit-appearance: none;
+    appearance: none;
+    resize: vertical;
+    box-sizing: border-box;
+    display: block;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  .manual-copy-textarea:focus { outline: none; background: #fff; }
+
+  .data-footer-hint {
+    font-size: 12px; color: var(--text-light); text-align: center;
+    margin-top: 14px; line-height: 1.6;
+  }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .field { display: block; }
+  .field-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; }
+  .field input, .field select, .field textarea {
+    display: block; width: 100%; padding: 10px 12px; border: 1px solid var(--border-strong);
+    border-radius: 10px; font-size: 15px; background: #fff; color: var(--text);
+    font-family: inherit; transition: border-color .15s, box-shadow .15s;
+    -webkit-appearance: none; appearance: none;
+  }
+  .field textarea { min-height: 70px; resize: vertical; }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.14);
+  }
+  .field input::placeholder, .field textarea::placeholder { color: #c7cbd1; }
+
+  .path-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .path-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .path-row > *, .path-row-3 > * { min-width: 0; }
+  .path-row-3 input { font-size: 14px; padding: 10px 10px; }
+
+  .quick-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .quick-chips:empty { display: none; }
+  .quick-chip {
+    font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    background: #f3f4f6; color: #4b5563; border: 1px solid transparent;
+    cursor: pointer; font-family: inherit; line-height: 1.5;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .quick-chip:active { background: #e5e7eb; }
+  .quick-chip.active { background: var(--primary-soft); color: var(--primary); border-color: #bfdbfe; font-weight: 500; }
+
+  .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn {
+    flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border-strong);
+    background: #fff; font-size: 15px; font-family: inherit; color: var(--text);
+    cursor: pointer; font-weight: 500; transition: background .12s;
+  }
+  .btn:active { background: #f3f4f6; }
+  .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
+  .btn-primary:active { background: var(--primary-hover); }
+  .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); font-weight: 600; }
+  .btn-danger:active { background: #b91c1c; }
+  .btn-full { width: 100%; }
+
+  .menu-list { display: flex; flex-direction: column; gap: 2px; }
+  .menu-item {
+    display: flex; align-items: center; gap: 12px; padding: 13px 14px;
+    border: none; background: transparent; border-radius: 12px; font-size: 15px;
+    color: var(--text); font-family: inherit; text-align: left; cursor: pointer;
+    width: 100%; transition: background .12s;
+  }
+  .menu-item:active { background: #f3f4f6; }
+  .menu-icon {
+    width: 30px; height: 30px; border-radius: 8px; background: #f3f4f6;
+    display: flex; align-items: center; justify-content: center; font-size: 15px; flex: none;
+  }
+  .menu-item.menu-danger { color: var(--danger); }
+  .menu-item.menu-danger .menu-icon { background: var(--danger-soft); }
+
+  .setting-row { background: #f7f8fb; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .setting-row label { display: flex; align-items: center; gap: 10px; font-size: 14px; margin: 0; cursor: pointer; }
+  .setting-row input[type="checkbox"] { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--primary); }
+  .hint { font-size: 12px; color: var(--text-muted); margin: 6px 0 12px; line-height: 1.55; }
+
+  .snapshot-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 10px;
+    margin-bottom: 6px; font-size: 13px;
+  }
+  .snapshot-item strong { font-weight: 600; }
+  .snapshot-item .meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .snapshot-item button {
+    padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 8px;
+    background: #fff; font-size: 13px; color: var(--primary); font-weight: 500;
+    cursor: pointer; font-family: inherit; flex: none;
+  }
+  .snapshot-item button:active { background: #f3f4f6; }
+
+  .switch {
+    position: relative; width: 42px; height: 24px; border-radius: 12px;
+    background: #d1d5db; transition: background .2s; flex: none;
+  }
+  .switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #fff; transition: transform .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .switch.on { background: var(--primary); }
+  .switch.on::after { transform: translateX(18px); }
+
+  .manage-tabs {
+    display: flex; gap: 4px; background: #f3f4f6;
+    padding: 4px; border-radius: 12px; margin-bottom: 14px;
+  }
+  .manage-tab {
+    flex: 1; padding: 9px 12px; border: none; background: transparent;
+    border-radius: 9px; font-size: 14px; font-family: inherit;
+    color: var(--text-muted); cursor: pointer; font-weight: 500;
+    transition: background .15s, color .15s, box-shadow .15s;
+  }
+  .manage-tab.active {
+    background: #fff; color: var(--text); font-weight: 600;
+    box-shadow: 0 1px 3px rgba(24,30,45,0.08);
+  }
+  .manage-add { display: flex; gap: 8px; margin-bottom: 12px; }
+  .manage-add input {
+    flex: 1; padding: 10px 12px; border: 1px solid var(--border-strong);
+    border-radius: 10px; font-size: 14px; font-family: inherit;
+    background: #f7f8fb; color: var(--text);
+    -webkit-appearance: none; appearance: none;
+  }
+  .manage-add input:focus {
+    outline: none; background: #fff; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.14);
+  }
+  .manage-add button {
+    flex: none; padding: 10px 16px; border-radius: 10px; border: none;
+    background: var(--primary); color: #fff; font-family: inherit;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .manage-add button:active { background: var(--primary-hover); }
+
+  .manage-tree { border: 1px solid var(--border-strong); border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+  .manage-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .manage-row:last-child { border-bottom: none; }
+  .manage-row[data-depth="0"] { background: #f7f8fb; }
+  .manage-row[data-depth="0"] .manage-name { font-weight: 600; color: var(--text); }
+  .manage-row[data-depth="1"] { background: #fff; }
+  .manage-row[data-depth="1"] .manage-name { color: var(--text); }
+  .manage-row[data-depth="2"] { background: #fafbfc; }
+  .manage-row[data-depth="2"] .manage-name { color: var(--text-muted); font-weight: 400; }
+
+  .manage-row-main { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .manage-name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .manage-count {
+    font-size: 11px; font-weight: 500; color: var(--text-muted);
+    background: #e5e7eb; border-radius: 999px; padding: 1px 8px; flex: none;
+  }
+  .manage-row[data-depth="0"] .manage-count { background: #dbeafe; color: #1e40af; }
+  .manage-row[data-depth="2"] .manage-name::before { content: '└ '; color: var(--text-light); }
+
+  .manage-actions { display: flex; gap: 4px; flex: none; }
+  .btn-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    border: 1px solid var(--border-strong); background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--text-muted);
+    cursor: pointer; font-family: inherit; padding: 0;
+  }
+  .btn-icon:active { background: #f3f4f6; }
+  .btn-icon.danger { color: var(--danger); }
+  .btn-icon.danger:active { background: var(--danger-soft); }
+  .btn-icon.add-child { color: var(--primary); font-size: 15px; font-weight: 700; }
+
+  .batch-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: #fff; border-top: 1px solid var(--border);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 16px rgba(24,30,45,0.06);
+    display: flex; flex-direction: column; gap: 8px;
+    animation: slideUp .2s ease;
+  }
+  .batch-bar.hidden { display: none; }
+  .batch-bar-row { display: flex; align-items: center; gap: 8px; }
+  .batch-info { flex: 1; font-size: 14px; color: var(--text-muted); }
+  .batch-info strong { color: var(--text); font-weight: 600; font-size: 15px; }
+  .batch-bar .btn-mini { flex: 1; text-align: center; padding: 9px 12px; }
+  .batch-bar .btn-mini.btn-danger { color: var(--danger); border-color: #fecaca; }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div>
+      <h1>储物清单</h1>
+      <div id="stats"></div>
+    </div>
+    <div class="header-actions">
+      <button id="btnBatch" class="icon-btn" title="批量管理">☑</button>
+      <button id="btnMenu" class="icon-btn" title="更多">⋯</button>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <input id="search" placeholder="搜索名称、位置、备注">
+  </div>
+  <div class="filter-bar">
+    <button type="button" class="filter-btn" id="btnFilterCategory">
+      <span class="filter-btn-label" id="filterCategoryLabel">分类</span>
+      <span class="filter-btn-arrow">▾</span>
+    </button>
+    <button type="button" class="filter-btn" id="btnFilterLocation">
+      <span class="filter-btn-label" id="filterLocationLabel">位置</span>
+      <span class="filter-btn-arrow">▾</span>
+    </button>
+    <button type="button" class="filter-btn" id="btnFilterExpiry">
+      <span class="filter-btn-label" id="filterExpiryLabel">状态</span>
+      <span class="filter-btn-arrow">▾</span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <div id="backupBanner" class="banner hidden"></div>
+  <section id="alertBox"></section>
+  <section id="list"></section>
+</main>
+
+<button id="btnAdd" class="fab" title="添加物品">+</button>
+
+<div id="filterModal" class="modal hidden">
+  <div class="sheet" style="max-height: 72vh;">
+    <div class="sheet-handle"></div>
+    <h2 id="filterModalTitle">选择分类</h2>
+    <div id="filterModalOptions" style="padding-bottom: 8px;"></div>
+  </div>
+</div>
+
+<div id="batchBar" class="batch-bar hidden">
+  <div class="batch-bar-row">
+    <div class="batch-info">已选 <strong id="batchCount">0</strong> 项</div>
+    <button type="button" class="btn-mini" id="btnBatchSelectAll">全选</button>
+    <button type="button" class="btn-mini" id="btnBatchCancel">取消</button>
+  </div>
+  <div class="batch-bar-row">
+    <button type="button" class="btn-mini" id="btnBatchCategory">改分类</button>
+    <button type="button" class="btn-mini" id="btnBatchLocation">改位置</button>
+    <button type="button" class="btn-mini btn-danger" id="btnBatchDelete">删除</button>
+  </div>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2 id="modalTitle">添加物品</h2>
+    <form id="itemForm" autocomplete="off">
+      <input type="hidden" id="itemId">
+      <datalist id="nameList"></datalist>
+      <datalist id="unitList"></datalist>
+      <div class="form-grid">
+        <label class="field full">
+          <span class="field-label">名称 *</span>
+          <input id="name" list="nameList" required placeholder="如：洗面奶">
+        </label>
+        <div class="field full">
+          <span class="field-label">分类（一级 / 二级 / 三级）</span>
+          <div class="path-row-3">
+            <input id="categoryL1" placeholder="一级">
+            <input id="categoryL2" placeholder="二级">
+            <input id="categoryL3" placeholder="三级">
+          </div>
+          <div class="quick-chips" id="categoryL1Chips"></div>
+          <div class="quick-chips" id="categoryL2Chips"></div>
+          <div class="quick-chips" id="categoryL3Chips"></div>
+        </div>
+        <div class="field full">
+          <span class="field-label">存放位置（房间 / 柜子 / 位置）</span>
+          <div class="path-row-3">
+            <input id="locationRoom" placeholder="房间">
+            <input id="locationCabinet" placeholder="柜子">
+            <input id="locationSpot" placeholder="位置">
+          </div>
+          <div class="quick-chips" id="locationRoomChips"></div>
+          <div class="quick-chips" id="locationCabinetChips"></div>
+          <div class="quick-chips" id="locationSpotChips"></div>
+        </div>
+        <label class="field">
+          <span class="field-label">数量</span>
+          <input type="number" id="quantity" min="0" step="1" value="1">
+        </label>
+        <label class="field">
+          <span class="field-label">单位</span>
+          <input id="unit" list="unitList" placeholder="个 / 瓶 / 盒">
+        </label>
+        <label class="field">
+          <span class="field-label">到期日</span>
+          <input type="date" id="expiry">
+        </label>
+        <label class="field">
+          <span class="field-label">提前提醒天数</span>
+          <input type="number" id="remindDays" min="0" value="30">
+        </label>
+        <label class="field full">
+          <span class="field-label">备注</span>
+          <textarea id="note" placeholder="品牌、规格、购买渠道等"></textarea>
+        </label>
+      </div>
+      <div class="form-actions">
+        <button type="button" id="btnCancel" class="btn">取消</button>
+        <button type="submit" class="btn btn-primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="menuModal" class="modal hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>更多</h2>
+    <div class="menu-list">
+      <button id="btnManage" class="menu-item">
+        <span class="menu-icon">🏷️</span><span>分类与位置管理</span>
+      </button>
+      <button id="btnExport" class="menu-item">
+        <span class="menu-icon">📤</span><span>导出 / 备份数据</span>
+      </button>
+      <label class="menu-item" for="importFile">
+        <span class="menu-icon">📥</span><span>导入备份 JSON</span>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </label>
+      <button id="btnNotify" class="menu-item">
+        <span class="menu-icon">🔔</span>
+        <span style="flex:1;">到期提醒</span>
+        <span id="notifySwitch" class="switch"></span>
+      </button>
+      <button id="btnBackupManage" class="menu-item">
+        <span class="menu-icon">🗂️</span><span>快照管理</span>
+      </button>
+      <button id="btnClear" class="menu-item menu-danger">
+        <span class="menu-icon">🗑️</span><span>清空所有数据</span>
+      </button>
+    </div>
+    <div class="form-actions">
+      <button type="button" id="btnCloseMenu" class="btn btn-full">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="manageModal" class="modal hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>分类与位置管理</h2>
+    <div class="manage-tabs">
+      <button type="button" class="manage-tab active" data-tab="category">分类</button>
+      <button type="button" class="manage-tab" data-tab="location">位置</button>
+    </div>
+    <div class="manage-add">
+      <input id="manageAddInput" placeholder="新增分类，如：日用品 或 日用品/清洁用品">
+      <button id="btnManageAdd">新增</button>
+    </div>
+    <p class="hint" id="manageHint">分类：一级，或 一级/二级。位置：房间，或 房间/柜子，或 房间/柜子/位置。用 / 分隔。</p>
+    <div id="manageContent"></div>
+    <div class="form-actions">
+      <button type="button" id="btnCloseManage" class="btn btn-full">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="batchEditModal" class="modal hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2 id="batchEditTitle">批量修改</h2>
+    <label class="field full">
+      <span class="field-label" id="batchEditLabel">新值</span>
+      <input id="batchEditInput" placeholder="">
+    </label>
+    <p class="hint" id="batchEditHint">用 / 分隔多级。留空保存则清空该项。</p>
+    <div class="quick-chips" id="batchEditChips"></div>
+    <div class="form-actions">
+      <button type="button" id="btnBatchEditCancel" class="btn">取消</button>
+      <button type="button" id="btnBatchEditConfirm" class="btn btn-primary">应用到已选</button>
+    </div>
+  </div>
+</div>
+
+<div id="backupModal" class="modal hidden">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>快照管理</h2>
+    <div class="setting-row">
+      <label>
+        <input type="checkbox" id="chkAutoDownload">
+        <span>退出 / 切到后台时自动备份</span>
+      </label>
+    </div>
+    <p class="hint">开启后会自动把最新数据存到 App 内部，下次打开可随时导出。同时保留最近 5 份本地快照，用于误删恢复。</p>
+    <div id="autoBackupBox"></div>
+    <h3>本地快照</h3>
+    <div id="snapshotList"></div>
+    <div class="form-actions">
+      <button type="button" id="btnSnapNow" class="btn">立即创建快照</button>
+      <button type="button" id="btnCloseBackup" class="btn btn-primary">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="uiDialog" class="modal hidden dialog-center">
+  <div class="sheet"></div>
+</div>
+
+<script>
+/* ===================== Capacitor 原生桥接 ===================== */
+const isCapacitor = !!(window.Capacitor &&
+                       typeof window.Capacitor.isNativePlatform === 'function' &&
+                       window.Capacitor.isNativePlatform());
+
+async function saveFileNative(content, filename, mime) {
+  if (!isCapacitor) return null;
+  const Plugins = (window.Capacitor && window.Capacitor.Plugins) || {};
+  const Filesystem = Plugins.Filesystem;
+  const Share = Plugins.Share;
+  if (!Filesystem || !Share) {
+    console.warn('[Capacitor] 插件未注入，退回 Web 方案');
+    return null;
+  }
+  try {
+    const writeResult = await Filesystem.writeFile({
+      path: 'exports/' + filename,
+      data: content,
+      directory: 'DOCUMENTS',
+      encoding: 'utf8',
+      recursive: true
+    });
+    await Share.share({
+      title: filename,
+      url: writeResult.uri,
+      dialogTitle: '保存或分享备份文件'
+    });
+    return writeResult.uri;
+  } catch (e) {
+    console.warn('[Capacitor] 原生保存失败：', e);
+    return null;
+  }
+}
+/* ============================================================ */
+
+const STORAGE_KEY = 'my_items_v1';
+const SNAPSHOT_KEY = 'my_items_snapshots_v1';
+const SETTINGS_KEY = 'my_items_settings_v1';
+const EXPANDED_KEY = 'my_items_expanded_v1';
+const TAXONOMY_KEY = 'my_items_taxonomy_v1';
+const AUTO_BACKUP_KEY = 'my_items_auto_backup_v1';
+const MAX_SNAPSHOTS = 5;
+const AUTO_DOWNLOAD_GAP = 30 * 60 * 1000;
+const SNAPSHOT_GAP = 60 * 1000;
+const BACKUP_REMIND_DAYS = 7;
+
+const CATEGORY_LEVELS = 3;
+const LOCATION_LEVELS = 3;
+
+let items = loadItems();
+let settings = loadSettings();
+let expandedIds = loadExpanded();
+let taxonomy = loadTaxonomy();
+let editingId = null;
+let dataChangedSinceExport = false;
+let lastSnapshotAt = 0;
+let lastAutoDownloadAt = 0;
+let manageTab = 'category';
+let selectionMode = false;
+let selectedIds = new Set();
+let batchEditField = null;
+let exportFormat = 'json';
+
+let filterState = { category: '', location: '', expiry: '' };
+let currentFilterType = 'category';
+let expandedFilterPaths = new Set();
+
+const $ = id => document.getElementById(id);
+
+function loadItems() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) { return []; } }
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+    return {
+      autoDownloadOnExit: !!s.autoDownloadOnExit,
+      lastExportAt: s.lastExportAt || null,
+      alertOnOpen: s.alertOnOpen !== false
+    };
+  } catch (e) {
+    return { autoDownloadOnExit: false, lastExportAt: null, alertOnOpen: true };
+  }
+}
+function loadExpanded() { try { return new Set(JSON.parse(localStorage.getItem(EXPANDED_KEY)) || []); } catch (e) { return new Set(); } }
+function loadTaxonomy() {
+  try {
+    const t = JSON.parse(localStorage.getItem(TAXONOMY_KEY)) || {};
+    return { categories: Array.isArray(t.categories) ? t.categories : [], locations: Array.isArray(t.locations) ? t.locations : [] };
+  } catch (e) {
+    return { categories: [], locations: [] };
+  }
+}
+function saveExpanded() { try { localStorage.setItem(EXPANDED_KEY, JSON.stringify(Array.from(expandedIds))); } catch (e) {} }
+function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+function saveTaxonomy() { localStorage.setItem(TAXONOMY_KEY, JSON.stringify(taxonomy)); }
+function saveItems() { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); dataChangedSinceExport = true; render(); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function localDateStr(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+function localDateTimeStr(date = new Date()) {
+  const p = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}${p(date.getMonth()+1)}${p(date.getDate())}_${p(date.getHours())}${p(date.getMinutes())}`;
+}
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date(localDateStr() + 'T00:00:00');
+  const target = new Date(dateStr + 'T00:00:00');
+  if (isNaN(target.getTime())) return null;
+  return Math.ceil((target - today) / 86400000);
+}
+function expiryStatus(item) {
+  const d = daysUntil(item.expiry);
+  if (d === null) return { key: 'none', label: '无到期', cls: 'none' };
+  const remind = Number(item.remindDays) || 0;
+  if (d < 0) return { key: 'expired', label: `已过期${Math.abs(d)}天`, cls: 'expired' };
+  if (d <= remind) return { key: 'soon', label: `${d}天后到期`, cls: 'soon' };
+  return { key: 'ok', label: `${d}天后到期`, cls: 'ok' };
+}
+
+function showToast(msg, duration) {
+  duration = duration || 2500;
+  const old = document.getElementById('appToast');
+  if (old) old.remove();
+  const toast = document.createElement('div');
+  toast.id = 'appToast';
+  toast.textContent = msg;
+  toast.style.cssText = [
+    'position:fixed', 'left:50%', 'bottom:110px',
+    'transform:translateX(-50%)',
+    'background:rgba(26,29,41,0.94)', 'color:#fff',
+    'padding:10px 18px', 'border-radius:10px',
+    'font-size:14px', 'z-index:9999',
+    'max-width:80%', 'text-align:center',
+    'box-shadow:0 4px 16px rgba(0,0,0,0.2)',
+    'animation:toastIn .2s ease',
+    'pointer-events:none'
+  ].join(';');
+  document.body.appendChild(toast);
+  setTimeout(function () {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity .3s';
+    setTimeout(function () { toast.remove(); }, 320);
+  }, duration);
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+function nl2br(s) { return escapeHtml(s).replace(/\n/g, '<br>'); }
+
+let uiDialogResolve = null;
+function uiDialogClose(result) {
+  const modal = $('uiDialog');
+  if (modal) modal.classList.add('hidden');
+  const resolve = uiDialogResolve;
+  uiDialogResolve = null;
+  if (resolve) resolve(result);
+}
+function uiDialog(config) {
+  return new Promise(resolve => {
+    if (uiDialogResolve) {
+      const oldResolve = uiDialogResolve;
+      uiDialogResolve = null;
+      try { oldResolve(null); } catch (e) {}
+    }
+    uiDialogResolve = resolve;
+
+    const modal = $('uiDialog');
+    const sheet = modal.querySelector('.sheet');
+
+    const inputHtml = config.input
+      ? `<input id="uiDialogInput" class="dialog-input" type="text"
+           value="${escapeHtml(config.input.value || '')}"
+           placeholder="${escapeHtml(config.input.placeholder || '')}">`
+      : '';
+
+    const buttonsHtml = (config.buttons || []).map((b, i) =>
+      `<button type="button" class="btn ${b.primary ? 'btn-primary' : ''} ${b.danger ? 'btn-danger' : ''}" data-idx="${i}">${escapeHtml(b.text)}</button>`
+    ).join('');
+
+    sheet.innerHTML = `
+      <h2 style="margin-top:0;">${escapeHtml(config.title || '提示')}</h2>
+      ${config.message ? `<p class="dialog-message">${nl2br(config.message)}</p>` : ''}
+      ${inputHtml}
+      <div class="form-actions" style="margin-top:18px;">${buttonsHtml}</div>
+    `;
+
+    const finish = idx => {
+      const b = (config.buttons || [])[idx];
+      if (!b) { uiDialogClose(null); return; }
+      let result = b.value;
+      if (b.useInput) {
+        const el = $('uiDialogInput');
+        result = el ? el.value : '';
+      }
+      uiDialogClose(result);
+    };
+
+    sheet.querySelectorAll('button[data-idx]').forEach(btn => {
+      btn.onclick = () => finish(Number(btn.dataset.idx));
+    });
+
+    let primaryIdx = (config.buttons || []).findIndex(b => b.primary);
+    if (primaryIdx < 0) primaryIdx = (config.buttons || []).length - 1;
+
+    if (config.input) {
+      const el = $('uiDialogInput');
+      if (el) {
+        el.addEventListener('keydown', ev => {
+          if (ev.key === 'Enter') { ev.preventDefault(); finish(primaryIdx); }
+        });
+        setTimeout(() => { el.focus(); el.select(); }, 140);
+      }
+    }
+
+    modal.classList.remove('hidden');
+  });
+}
+function uiConfirm(message, options) {
+  options = options || {};
+  return uiDialog({
+    title: options.title || '请确认',
+    message,
+    buttons: [
+      { text: options.cancelText || '取消', value: false },
+      { text: options.okText || '确定', value: true, primary: !options.danger, danger: !!options.danger }
+    ]
+  });
+}
+function uiPrompt(message, defaultValue, options) {
+  options = options || {};
+  return uiDialog({
+    title: options.title || '请输入',
+    message,
+    input: { value: defaultValue || '', placeholder: options.placeholder || '' },
+    buttons: [
+      { text: '取消', value: null },
+      { text: '确定', value: '', useInput: true, primary: true }
+    ]
+  });
+}
+
+async function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;padding:0;border:none;background:transparent;';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { ta.setSelectionRange(0, ta.value.length); } catch (e) {}
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+  if (ok) return true;
+  throw new Error('copy failed');
+}
+
+/* ===================== 多路文件保存 ===================== */
+async function tryAllSaveMethods(content, filename, mime) {
+
+  // ★ 优先走 Capacitor 原生（写文件 + 系统分享）
+  const nativeUri = await saveFileNative(content, filename, mime);
+  if (nativeUri) return { ok: true, method: 'native' };
+
+  // ① navigator.share with files
+  if (typeof navigator.share === 'function') {
+    try {
+      const blob = new Blob([content], { type: mime });
+      let file = null;
+      try { file = new File([blob], filename, { type: mime }); } catch (e) { file = null; }
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return { ok: true, method: 'share-file' };
+      }
+      try {
+        await navigator.share({ title: filename, text: content });
+        return { ok: true, method: 'share-text' };
+      } catch (e2) {
+        if (e2 && e2.name === 'AbortError') return { ok: false, method: 'cancelled' };
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return { ok: false, method: 'cancelled' };
+    }
+  }
+
+  // ② File System Access API（桌面 Chrome/Edge）
+  if (typeof window.showSaveFilePicker === 'function') {
+    try {
+      const ext = '.' + filename.split('.').pop();
+      const cleanMime = String(mime || '').split(';')[0];
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: '文件', accept: { [cleanMime]: [ext] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(new Blob([content], { type: mime }));
+      await writable.close();
+      return { ok: true, method: 'filesystem' };
+    } catch (e) {
+      if (e && e.name === 'AbortError') return { ok: false, method: 'cancelled' };
+    }
+  }
+
+  // ③ a.download + blob URL
+  try {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {}
+    }, 2000);
+  } catch (e) {}
+
+  // ④ a.download + data URL（小文件才稳妥）
+  if (content.length < 2 * 1024 * 1024) {
+    try {
+      const dataUrl = 'data:' + mime + ';charset=utf-8,' + encodeURIComponent(content);
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { try { document.body.removeChild(a); } catch (e) {} }, 2000);
+    } catch (e) {}
+  }
+
+  // ⑤ iframe + blob URL
+  try {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      try { document.body.removeChild(iframe); URL.revokeObjectURL(url); } catch (e) {}
+    }, 3000);
+  } catch (e) {}
+
+  // ⑥ window.open(blob URL)
+  try {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    if (w) {
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 3000);
+    } else {
+      URL.revokeObjectURL(url);
+    }
+  } catch (e) {}
+
+  return { ok: true, method: 'download-blob' };
+}
+
+/* ===================== 路径工具 ===================== */
+function extractParts(path, levels) {
+  const raw = String(path || '').split('/').map(s => s.trim()).filter(Boolean);
+  const result = new Array(levels).fill('');
+  if (raw.length === 0) return result;
+  for (let i = 0; i < levels - 1; i++) result[i] = raw[i] || '';
+  result[levels - 1] = raw.slice(levels - 1).join('/');
+  return result;
+}
+function joinParts(parts) {
+  return (parts || []).map(s => String(s || '').trim()).filter(Boolean).join('/');
+}
+function displayPath(p) {
+  return String(p || '').split('/').map(x => x.trim()).filter(Boolean).join(' › ');
+}
+function pathDepth(p) {
+  return String(p || '').split('/').map(s => s.trim()).filter(Boolean).length;
+}
+function childrenAt(paths, parentPath) {
+  const set = new Set();
+  const parentParts = parentPath ? String(parentPath).split('/').map(s => s.trim()).filter(Boolean) : [];
+  paths.forEach(p => {
+    const parts = String(p).split('/').map(s => s.trim()).filter(Boolean);
+    if (parts.length <= parentParts.length) return;
+    for (let i = 0; i < parentParts.length; i++) if (parts[i] !== parentParts[i]) return;
+    set.add(parts[parentParts.length]);
+  });
+  return Array.from(set).sort();
+}
+function topLevel(paths) { return childrenAt(paths, ''); }
+function allCategoryPaths() {
+  const set = new Set();
+  items.forEach(i => { if (i.category) set.add(i.category); });
+  taxonomy.categories.forEach(p => set.add(p));
+  return Array.from(set);
+}
+function allLocationPaths() {
+  const set = new Set();
+  items.forEach(i => { if (i.location) set.add(i.location); });
+  taxonomy.locations.forEach(p => set.add(p));
+  return Array.from(set);
+}
+function buildFilterTree(paths) {
+  const root = { children: {} };
+  paths.forEach(p => {
+    const parts = String(p).split('/').map(s => s.trim()).filter(Boolean);
+    if (!parts.length) return;
+    let node = root;
+    let currentPath = '';
+    parts.forEach(part => {
+      currentPath = currentPath ? currentPath + '/' + part : part;
+      if (!node.children[part]) node.children[part] = { name: part, path: currentPath, children: {} };
+      node = node.children[part];
+    });
+  });
+  return root;
+}
+
+function takeSnapshot(reason) {
+  if (!items.length) return;
+  let hash;
+  try { hash = JSON.stringify(items); } catch (e) { return; }
+  let snaps = [];
+  try { snaps = JSON.parse(localStorage.getItem(SNAPSHOT_KEY)) || []; } catch (e) {}
+  if (snaps.length && snaps[snaps.length - 1].hash === hash) return;
+  snaps.push({ id: uid(), time: new Date().toISOString(), reason: reason || 'auto', hash, items: items.map(i => ({ ...i })) });
+  if (snaps.length > MAX_SNAPSHOTS) snaps = snaps.slice(-MAX_SNAPSHOTS);
+  while (snaps.length) {
+    try { localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snaps)); return; }
+    catch (e) { snaps.shift(); }
+  }
+}
+function getSnapshots() { try { return JSON.parse(localStorage.getItem(SNAPSHOT_KEY)) || []; } catch (e) { return []; } }
+
+async function restoreSnapshot(id) {
+  const snaps = getSnapshots();
+  const snap = snaps.find(s => s.id === id);
+  if (!snap) { showToast('快照不存在'); return; }
+  const ok = await uiConfirm(
+    `确定用这份快照覆盖当前数据？\n快照时间：${formatTime(snap.time)}\n共 ${snap.items.length} 条`,
+    { title: '恢复快照', okText: '恢复', danger: true }
+  );
+  if (!ok) return;
+  items = snap.items.map(i => ({ ...i }));
+  saveItems(); renderSnapshots(); showToast('已恢复');
+}
+function formatTime(iso) {
+  const t = new Date(iso);
+  const p = n => String(n).padStart(2, '0');
+  return `${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())} ${p(t.getHours())}:${p(t.getMinutes())}`;
+}
+function renderSnapshots() {
+  const snaps = getSnapshots();
+  const box = $('snapshotList');
+  if (!snaps.length) { box.innerHTML = '<p class="hint">暂无快照。退出或切到后台时会自动生成。</p>'; return; }
+  const reasonMap = { visibilitychange: '切到后台', pagehide: '退出页面', manual: '手动', init: '打开页面' };
+  box.innerHTML = snaps.slice().reverse().map(s => `
+    <div class="snapshot-item">
+      <div>
+        <strong>${formatTime(s.time)}</strong>
+        <div class="meta">${s.items.length} 条 · ${reasonMap[s.reason] || '自动'}</div>
+      </div>
+      <button onclick="restoreSnapshot('${s.id}')">恢复</button>
+    </div>
+  `).join('');
+}
+
+function saveAutoBackupToStorage() {
+  try {
+    const content = buildJSONContent();
+    const filename = `储物清单备份_${localDateTimeStr()}.json`;
+    localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify({
+      content, filename,
+      time: new Date().toISOString(),
+      count: items.length
+    }));
+    return true;
+  } catch (e) { return false; }
+}
+function getAutoBackupFromStorage() {
+  try { return JSON.parse(localStorage.getItem(AUTO_BACKUP_KEY)); } catch (e) { return null; }
+}
+function renderAutoBackup() {
+  const box = $('autoBackupBox');
+  if (!box) return;
+  const ab = getAutoBackupFromStorage();
+  if (!ab) { box.innerHTML = ''; return; }
+  box.innerHTML = `
+    <div class="setting-row" style="display:flex; align-items:center; gap:10px;">
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:600; font-size:13.5px;">上次自动备份</div>
+        <div class="hint" style="margin:3px 0 0;">${formatTime(ab.time)} · ${ab.count || 0} 条</div>
+      </div>
+      <button type="button" class="btn-mini" id="btnOpenAutoBackup" style="flex:none; padding:8px 14px;">导出</button>
+    </div>
+  `;
+  const btn = $('btnOpenAutoBackup');
+  if (btn) {
+    btn.onclick = () => {
+      openDataPanelWithContent(ab.content, ab.filename, 'application/json');
+    };
+  }
+}
+
+function markExported() {
+  settings.lastExportAt = new Date().toISOString();
+  saveSettings(); dataChangedSinceExport = false; renderBackupBanner();
+}
+function maybeAutoDownload() {
+  if (!settings.autoDownloadOnExit) return;
+  if (!dataChangedSinceExport) return;
+  if (!items.length) return;
+  const now = Date.now();
+  if (now - lastAutoDownloadAt < AUTO_DOWNLOAD_GAP) return;
+  lastAutoDownloadAt = now;
+
+  const stored = saveAutoBackupToStorage();
+
+  // 顺手尝试一次下载
+  try {
+    const content = buildJSONContent();
+    const filename = `储物清单备份_${localDateTimeStr()}.json`;
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {} }, 1500);
+  } catch (e) {}
+
+  if (stored) markExported();
+}
+function handleLeave(reason) {
+  const now = Date.now();
+  if (now - lastSnapshotAt > SNAPSHOT_GAP) { lastSnapshotAt = now; takeSnapshot(reason); }
+  maybeAutoDownload();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') handleLeave('visibilitychange'); });
+window.addEventListener('pagehide', () => handleLeave('pagehide'));
+
+function filterLabelFor(type) {
+  const v = filterState[type];
+  if (!v) return '';
+  const parts = v.split('/').map(s => s.trim()).filter(Boolean);
+  return parts[parts.length - 1] || v;
+}
+
+function updateFilterBar() {
+  const catBtn = $('btnFilterCategory');
+  const locBtn = $('btnFilterLocation');
+  const expBtn = $('btnFilterExpiry');
+  const catLabel = $('filterCategoryLabel');
+  const locLabel = $('filterLocationLabel');
+  const expLabel = $('filterExpiryLabel');
+
+  if (filterState.category) {
+    catBtn.classList.add('active');
+    catLabel.textContent = filterLabelFor('category');
+  } else {
+    catBtn.classList.remove('active');
+    catLabel.textContent = '分类';
+  }
+  if (filterState.location) {
+    locBtn.classList.add('active');
+    locLabel.textContent = filterLabelFor('location');
+  } else {
+    locBtn.classList.remove('active');
+    locLabel.textContent = '位置';
+  }
+  if (filterState.expiry) {
+    expBtn.classList.add('active');
+    const map = { expired: '已过期', soon: '临期', hasExpiry: '有到期日', none: '无到期日' };
+    expLabel.textContent = map[filterState.expiry] || '状态';
+  } else {
+    expBtn.classList.remove('active');
+    expLabel.textContent = '状态';
+  }
+}
+
+function openFilterModal(type) {
+  currentFilterType = type;
+  expandedFilterPaths.clear();
+  const current = filterState[type];
+  if (current && (type === 'category' || type === 'location')) {
+    const parts = current.split('/').map(s => s.trim()).filter(Boolean);
+    let cur = '';
+    for (let i = 0; i < parts.length - 1; i++) {
+      cur = cur ? cur + '/' + parts[i] : parts[i];
+      expandedFilterPaths.add(cur);
+    }
+  }
+  const title = type === 'category' ? '选择分类' : (type === 'location' ? '选择位置' : '选择状态');
+  $('filterModalTitle').textContent = title;
+  renderFilterOptions();
+  $('filterModal').classList.remove('hidden');
+}
+
+function renderFilterNodes(children, depth, current) {
+  let html = '';
+  Object.values(children).sort((a, b) => a.name.localeCompare(b.name)).forEach(node => {
+    const hasChildren = Object.keys(node.children).length > 0;
+    const isExpanded = expandedFilterPaths.has(node.path);
+    const active = node.path === current;
+    html += `<div class="filter-row" data-depth="${depth}">
+      <button type="button" class="filter-expand ${hasChildren ? '' : 'empty'} ${isExpanded ? 'expanded' : ''}" data-path="${escapeHtml(node.path)}" tabindex="-1">▸</button>
+      <button type="button" class="filter-option${active ? ' active' : ''}" data-value="${escapeHtml(node.path)}">
+        <span class="filter-option-label">${escapeHtml(node.name)}</span>
+        <span class="filter-option-check">✓</span>
+      </button>
+    </div>`;
+    if (hasChildren && isExpanded) {
+      html += renderFilterNodes(node.children, depth + 1, current);
+    }
+  });
+  return html;
+}
+
+function renderFilterOptions() {
+  const box = $('filterModalOptions');
+  const type = currentFilterType;
+  const current = filterState[type];
+  let html = '';
+
+  if (type === 'expiry') {
+    const opts = [
+      { value: '', label: '全部状态' },
+      { value: 'expired', label: '已过期' },
+      { value: 'soon', label: '临期' },
+      { value: 'hasExpiry', label: '有到期日' },
+      { value: 'none', label: '无到期日' }
+    ];
+    html = opts.map(o => {
+      const active = o.value === current;
+      return `<button type="button" class="filter-option${active ? ' active' : ''}" data-value="${escapeHtml(o.value)}">
+        <span class="filter-option-label">${escapeHtml(o.label)}</span>
+        <span class="filter-option-check">✓</span>
+      </button>`;
+    }).join('');
+  } else {
+    const paths = type === 'category' ? allCategoryPaths() : allLocationPaths();
+    const tree = buildFilterTree(paths);
+    const allLabel = type === 'category' ? '全部分类' : '全部房间';
+    html = `<button type="button" class="filter-option${current === '' ? ' active' : ''}" data-value="">
+      <span class="filter-option-label">${allLabel}</span>
+      <span class="filter-option-check">✓</span>
+    </button>`;
+    const topChildren = Object.values(tree.children);
+    if (!topChildren.length) {
+      html += `<p class="hint" style="padding: 8px 12px; margin: 0;">暂无可用${type === 'category' ? '分类' : '位置'}</p>`;
+    } else {
+      html += renderFilterNodes(tree.children, 0, current);
+    }
+  }
+
+  box.innerHTML = html;
+
+  box.querySelectorAll('.filter-expand').forEach(btn => {
+    if (btn.classList.contains('empty')) return;
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const path = btn.dataset.path;
+      if (expandedFilterPaths.has(path)) expandedFilterPaths.delete(path);
+      else expandedFilterPaths.add(path);
+      renderFilterOptions();
+    };
+  });
+
+  box.querySelectorAll('.filter-option').forEach(btn => {
+    btn.onclick = () => {
+      filterState[currentFilterType] = btn.dataset.value || '';
+      $('filterModal').classList.add('hidden');
+      updateFilterBar();
+      renderList();
+    };
+  });
+}
+
+function renderStats() {
+  const total = items.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+  const expired = items.filter(i => expiryStatus(i).key === 'expired').length;
+  const soon = items.filter(i => expiryStatus(i).key === 'soon').length;
+  const parts = [`${items.length} 种 · ${total} 件`];
+  if (expired) parts.push(`<span class="stat-danger">已过期 ${expired}</span>`);
+  if (soon) parts.push(`<span class="stat-warning">临期 ${soon}</span>`);
+  $('stats').innerHTML = parts.join(' · ');
+}
+function renderBackupBanner() {
+  const banner = $('backupBanner');
+  if (!items.length) { banner.classList.add('hidden'); return; }
+  const last = settings.lastExportAt ? new Date(settings.lastExportAt) : null;
+  const days = last ? Math.floor((Date.now() - last.getTime()) / 86400000) : null;
+  if (last && days < BACKUP_REMIND_DAYS) { banner.classList.add('hidden'); return; }
+  banner.classList.remove('hidden');
+  banner.innerHTML = (last ? `<span>已经 ${days} 天没导出备份了</span>` : `<span>还没有导出过备份</span>`) + `<button id="btnQuickBackup">立即导出</button>`;
+  const btn = $('btnQuickBackup'); if (btn) btn.onclick = () => openDataPanel();
+}
+function renderAlerts() {
+  const alerts = items.filter(i => ['expired', 'soon'].includes(expiryStatus(i).key)).sort((a, b) => (a.expiry || '').localeCompare(b.expiry || ''));
+  if (!alerts.length) { $('alertBox').innerHTML = ''; return; }
+  $('alertBox').innerHTML = `<div class="alerts-title">到期提醒</div>` +
+    alerts.slice(0, 6).map(i => {
+      const st = expiryStatus(i);
+      return `<div class="alert-item ${st.cls}">${escapeHtml(i.name)} · ${escapeHtml(displayPath(i.location) || '未填位置')} · ${st.label}</div>`;
+    }).join('');
+}
+
+function pathMatches(value, filter) {
+  if (!filter) return true;
+  const v = (value || '').trim();
+  return v === filter || v.startsWith(filter + '/');
+}
+
+function getFilteredItems() {
+  const q = $('search').value.trim().toLowerCase();
+  const cat = filterState.category;
+  const loc = filterState.location;
+  const exp = filterState.expiry;
+
+  return items.filter(i => {
+    if (cat && !pathMatches(i.category, cat)) return false;
+    if (loc && !pathMatches(i.location, loc)) return false;
+    const st = expiryStatus(i);
+    if (exp === 'expired' && st.key !== 'expired') return false;
+    if (exp === 'soon' && st.key !== 'soon') return false;
+    if (exp === 'hasExpiry' && !i.expiry) return false;
+    if (exp === 'none' && i.expiry) return false;
+    if (q) {
+      const text = [i.name, i.category, i.location, i.note, i.unit].join(' ').toLowerCase();
+      if (!text.includes(q)) return false;
+    }
+    return true;
+  }).sort((a, b) => {
+    if (a.expiry && b.expiry) return a.expiry.localeCompare(b.expiry);
+    if (a.expiry) return -1;
+    if (b.expiry) return 1;
+    return (b.createdAt || '').localeCompare(a.createdAt || '');
+  });
+}
+
+function toggleCard(id) {
+  if (selectionMode) { toggleSelect(id); return; }
+  if (expandedIds.has(id)) expandedIds.delete(id);
+  else expandedIds.add(id);
+  saveExpanded();
+  const card = document.querySelector(`.item-card[data-id="${id}"]`);
+  if (card) card.classList.toggle('collapsed', !expandedIds.has(id));
+}
+
+function renderList() {
+  const list = getFilteredItems();
+  if (!list.length) {
+    $('list').innerHTML = `<div class="empty"><div class="empty-icon">📦</div><div>没有找到物品</div><div class="empty-sub">试试换个筛选条件，或点右下角 + 添加</div></div>`;
+    return;
+  }
+  $('list').innerHTML = list.map(i => {
+    const st = expiryStatus(i);
+    const isExpanded = expandedIds.has(i.id);
+    const selected = selectedIds.has(i.id);
+    const catText = displayPath(i.category) || '未分类';
+    const locText = displayPath(i.location) || '未填位置';
+    const checkbox = selectionMode
+      ? `<div class="item-checkbox ${selected ? 'checked' : ''}">${selected ? '✓' : ''}</div>`
+      : '';
+    const collapsed = !isExpanded;
+    const qty = i.quantity || 0;
+    const unitText = i.unit ? `<small>${escapeHtml(i.unit)}</small>` : '';
+
+    return `<article class="item-card status-${st.key} ${collapsed ? 'collapsed' : ''} ${selected ? 'selected' : ''}" data-id="${i.id}">
+      <div class="item-head" onclick="toggleCard('${i.id}')">
+        ${checkbox}
+        <div class="head-main">
+          <h3 class="item-name">${escapeHtml(i.name)}</h3>
+          <div class="item-meta">${escapeHtml(catText)} · ${escapeHtml(locText)}</div>
+        </div>
+        <div class="head-right">
+          <span class="badge ${st.cls}">${st.label}</span>
+          ${selectionMode ? '' : '<span class="chevron">▾</span>'}
+        </div>
+      </div>
+      <div class="item-body">
+        ${selectionMode ? '' : `<div class="qty-control">
+          <button class="btn-qty" onclick="changeQty('${i.id}', -1)" title="减一">−</button>
+          <span class="qty-value">${qty}${unitText}</span>
+          <button class="btn-qty" onclick="changeQty('${i.id}', 1)" title="加一">+</button>
+        </div>`}
+        ${i.expiry ? `<div class="expiry-row"><span class="expiry-label">到期</span><span class="expiry-date">${i.expiry}</span></div>` : ''}
+        ${i.note ? `<p class="item-note">${escapeHtml(i.note)}</p>` : ''}
+        ${selectionMode ? '' : `<div class="item-actions">
+          <button class="btn-mini" onclick="editItem('${i.id}')">编辑</button>
+          <button class="btn-mini" onclick="copyItem('${i.id}')">复制</button>
+          <button class="btn-mini btn-danger" onclick="deleteItem('${i.id}')">删除</button>
+        </div>`}
+      </div>
+    </article>`;
+  }).join('');
+}
+
+function render() {
+  updateFilterBar();
+  renderStats(); renderBackupBanner(); renderAlerts(); renderList();
+  updateBatchBar();
+  if (!$('manageModal').classList.contains('hidden')) renderManage();
+  if (!$('filterModal').classList.contains('hidden')) renderFilterOptions();
+}
+
+function renderChips(box, options, selected) {
+  if (!options.length) { box.innerHTML = ''; return; }
+  box.innerHTML = options.map(o =>
+    `<button type="button" class="quick-chip${o === selected ? ' active' : ''}" data-val="${escapeHtml(o)}">${escapeHtml(o)}</button>`
+  ).join('');
+}
+function refreshCategoryChips() {
+  const paths = allCategoryPaths();
+  const l1 = $('categoryL1').value.trim();
+  const l2 = $('categoryL2').value.trim();
+  renderChips($('categoryL1Chips'), topLevel(paths), l1);
+  renderChips($('categoryL2Chips'), childrenAt(paths, l1), l2);
+  renderChips($('categoryL3Chips'), childrenAt(paths, joinParts([l1, l2])), $('categoryL3').value.trim());
+}
+function refreshLocationChips() {
+  const paths = allLocationPaths();
+  const room = $('locationRoom').value.trim();
+  const cabinet = $('locationCabinet').value.trim();
+  renderChips($('locationRoomChips'), topLevel(paths), room);
+  renderChips($('locationCabinetChips'), childrenAt(paths, room), cabinet);
+  renderChips($('locationSpotChips'), childrenAt(paths, joinParts([room, cabinet])), $('locationSpot').value.trim());
+}
+function bindChipBox(boxId, inputId, after) {
+  $(boxId).addEventListener('click', e => {
+    const btn = e.target.closest('.quick-chip');
+    if (!btn) return;
+    $(inputId).value = btn.dataset.val;
+    if (after) after();
+  });
+}
+
+function buildManageTree(field) {
+  const paths = field === 'category' ? allCategoryPaths() : allLocationPaths();
+  const root = { children: {} };
+  paths.forEach(p => {
+    const parts = String(p).split('/').map(s => s.trim()).filter(Boolean);
+    let node = root; let currentPath = '';
+    parts.forEach(part => {
+      currentPath = currentPath ? currentPath + '/' + part : part;
+      if (!node.children[part]) node.children[part] = { name: part, path: currentPath, children: {}, count: 0 };
+      node = node.children[part];
+    });
+  });
+  items.forEach(i => {
+    const v = (i[field] || '').trim();
+    if (!v) return;
+    const parts = v.split('/').map(s => s.trim()).filter(Boolean);
+    let node = root; let currentPath = '';
+    for (const part of parts) {
+      currentPath = currentPath ? currentPath + '/' + part : part;
+      if (node.children[part]) { node.children[part].count++; node = node.children[part]; }
+      else break;
+    }
+  });
+  return root.children;
+}
+function renderManageNode(node, depth, field) {
+  const maxLevels = field === 'category' ? CATEGORY_LEVELS : LOCATION_LEVELS;
+  const canAddChild = depth + 1 < maxLevels;
+  let html = `<div class="manage-row" data-depth="${depth}">
+    <div class="manage-row-main">
+      <span class="manage-name">${escapeHtml(node.name)}</span>
+      <span class="manage-count">${node.count}</span>
+    </div>
+    <div class="manage-actions">
+      ${canAddChild ? `<button class="btn-icon add-child" data-action="addchild" data-field="${field}" data-path="${escapeHtml(node.path)}" title="在「${escapeHtml(node.name)}」下新增子级">＋</button>` : ''}
+      <button class="btn-icon" data-action="rename" data-field="${field}" data-path="${escapeHtml(node.path)}" title="重命名">✎</button>
+      <button class="btn-icon danger" data-action="delete" data-field="${field}" data-path="${escapeHtml(node.path)}" title="删除">🗑</button>
+    </div>
+  </div>`;
+  Object.values(node.children).forEach(child => { html += renderManageNode(child, depth + 1, field); });
+  return html;
+}
+function renderManage() {
+  const field = manageTab;
+  const fieldName = field === 'category' ? '分类' : '位置';
+  const tree = buildManageTree(field);
+  const list = Object.values(tree).sort((a, b) => a.name.localeCompare(b.name));
+
+  const input = $('manageAddInput');
+  if (field === 'category') {
+    input.placeholder = '新增分类，如：日用品 或 日用品/清洁用品/洗衣液';
+    $('manageHint').textContent = '分类：最多三级，用 / 分隔；也可点每一行右侧的 ＋ 在该级下新增子级。';
+  } else {
+    input.placeholder = '新增位置，如：卧室 或 卧室/衣柜 或 卧室/衣柜/上层';
+    $('manageHint').textContent = '位置：房间，或 房间/柜子，或 房间/柜子/位置，用 / 分隔；也可点每一行右侧的 ＋ 在该级下新增子级。';
+  }
+
+  if (!list.length) {
+    $('manageContent').innerHTML = `<p class="hint">还没有${fieldName}。在上面输入名称并点「新增」即可创建。</p>`;
+    return;
+  }
+  $('manageContent').innerHTML = `<div class="manage-tree">${
+    list.map(node => renderManageNode(node, 0, field)).join('')
+  }</div>`;
+}
+function addManageEntry() {
+  const field = manageTab;
+  const fieldName = field === 'category' ? '分类' : '位置';
+  const input = $('manageAddInput');
+  const raw = input.value.trim();
+  if (!raw) { showToast(`请输入${fieldName}名称`); return; }
+  if (raw.includes('//')) { showToast('不能出现连续的 /'); return; }
+
+  const parts = raw.split('/').map(s => s.trim()).filter(Boolean);
+  if (!parts.length) { showToast('名称不能为空'); return; }
+
+  const maxLevels = field === 'category' ? CATEGORY_LEVELS : LOCATION_LEVELS;
+  if (parts.length > maxLevels) { showToast(`${fieldName}最多 ${maxLevels} 级`); return; }
+
+  const arr = field === 'category' ? taxonomy.categories : taxonomy.locations;
+  const existing = field === 'category' ? allCategoryPaths() : allLocationPaths();
+  let added = 0; let currentPath = '';
+  parts.forEach(part => {
+    currentPath = currentPath ? currentPath + '/' + part : part;
+    if (!existing.includes(currentPath)) { arr.push(currentPath); existing.push(currentPath); added++; }
+  });
+
+  if (!added) { showToast('该' + fieldName + '已存在'); return; }
+
+  saveTaxonomy();
+  input.value = '';
+  renderManage();
+  render();
+  showToast('已新增');
+}
+
+async function addChildManagePath(field, parentPath) {
+  const fieldName = field === 'category' ? '分类' : '位置';
+  const maxLevels = field === 'category' ? CATEGORY_LEVELS : LOCATION_LEVELS;
+  const depth = pathDepth(parentPath);
+  if (depth >= maxLevels) { showToast(`${fieldName}最多 ${maxLevels} 级`); return; }
+
+  const name = await uiPrompt(
+    `在「${displayPath(parentPath)}」下新增${fieldName}`,
+    '',
+    { title: `新增子级${fieldName}`, placeholder: '请输入名称' }
+  );
+  if (name === null) return;
+
+  const trimmed = String(name).trim();
+  if (!trimmed) { showToast('名称不能为空'); return; }
+  if (trimmed.includes('/')) { showToast('名称中不能包含 /'); return; }
+
+  const newPath = parentPath + '/' + trimmed;
+  const arr = field === 'category' ? taxonomy.categories : taxonomy.locations;
+  const existing = field === 'category' ? allCategoryPaths() : allLocationPaths();
+
+  if (existing.includes(newPath)) {
+    if (!arr.includes(newPath)) { arr.push(newPath); saveTaxonomy(); }
+    renderManage(); render();
+    showToast('该' + fieldName + '已存在');
+    return;
+  }
+
+  const parts = newPath.split('/').map(s => s.trim()).filter(Boolean);
+  let cur = '';
+  parts.forEach(p => {
+    cur = cur ? cur + '/' + p : p;
+    if (!arr.includes(cur)) arr.push(cur);
+  });
+
+  saveTaxonomy();
+  renderManage();
+  render();
+  showToast('已新增');
+}
+
+async function renameManagePath(field, oldPath) {
+  const fieldName = field === 'category' ? '分类' : '位置';
+  const parts = oldPath.split('/').map(s => s.trim()).filter(Boolean);
+  const oldName = parts[parts.length - 1];
+  const parentPath = parts.slice(0, -1).join('/');
+
+  const newName = await uiPrompt(
+    `重命名${fieldName}「${oldName}」`,
+    oldName,
+    { title: `重命名${fieldName}`, placeholder: '请输入新名称' }
+  );
+  if (newName === null) return;
+
+  const trimmed = String(newName).trim();
+  if (!trimmed) { showToast('名称不能为空'); return; }
+  if (trimmed === oldName) return;
+  if (trimmed.includes('/')) { showToast('名称中不能包含 /'); return; }
+
+  const newPath = parentPath ? parentPath + '/' + trimmed : trimmed;
+
+  let count = 0;
+  items.forEach(i => {
+    const p = (i[field] || '').trim();
+    if (p === oldPath) { i[field] = newPath; count++; }
+    else if (p.startsWith(oldPath + '/')) { i[field] = newPath + p.slice(oldPath.length); count++; }
+  });
+
+  const key = field === 'category' ? 'categories' : 'locations';
+  taxonomy[key] = taxonomy[key].map(p => {
+    if (p === oldPath) return newPath;
+    if (p.startsWith(oldPath + '/')) return newPath + p.slice(oldPath.length);
+    return p;
+  }).filter((p, idx, self) => self.indexOf(p) === idx);
+
+  saveTaxonomy(); saveItems(); renderManage();
+  if (count) showToast(`已重命名，更新了 ${count} 个物品`);
+  else showToast('已重命名');
+}
+
+async function deleteManagePath(field, path) {
+  const fieldName = field === 'category' ? '分类' : '位置';
+  let count = 0;
+  items.forEach(i => {
+    const p = (i[field] || '').trim();
+    if (p === path || p.startsWith(path + '/')) count++;
+  });
+
+  const msg = count
+    ? `确定删除「${displayPath(path)}」？\n${count} 个物品的${fieldName}将被清空。`
+    : `确定删除「${displayPath(path)}」？`;
+  const ok = await uiConfirm(msg, { title: `删除${fieldName}`, okText: '删除', danger: true });
+  if (!ok) return;
+
+  items.forEach(i => {
+    const p = (i[field] || '').trim();
+    if (p === path || p.startsWith(path + '/')) { i[field] = ''; }
+  });
+
+  const key = field === 'category' ? 'categories' : 'locations';
+  taxonomy[key] = taxonomy[key].filter(p => p !== path && !p.startsWith(path + '/'));
+  saveTaxonomy(); saveItems(); renderManage();
+}
+
+$('manageContent').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const field = btn.dataset.field;
+  const path = btn.dataset.path;
+  if (action === 'rename') renameManagePath(field, path);
+  else if (action === 'delete') deleteManagePath(field, path);
+  else if (action === 'addchild') addChildManagePath(field, path);
+});
+
+document.querySelectorAll('.manage-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.manage-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    manageTab = tab.dataset.tab;
+    $('manageAddInput').value = '';
+    renderManage();
+  });
+});
+
+$('btnManageAdd').addEventListener('click', addManageEntry);
+$('manageAddInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addManageEntry(); }
+});
+
+function updateAutoFillLists() {
+  const names = Array.from(new Set(items.map(i => i.name).filter(Boolean))).sort();
+  $('nameList').innerHTML = names.map(n => `<option value="${escapeHtml(n)}"></option>`).join('');
+  const units = Array.from(new Set(items.map(i => i.unit).filter(Boolean))).sort();
+  $('unitList').innerHTML = units.map(u => `<option value="${escapeHtml(u)}"></option>`).join('');
+}
+function getLastItemDefaults() {
+  if (!items.length) return null;
+  const sorted = [...items].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const last = sorted[0];
+  return { category: last.category || '', location: last.location || '', unit: last.unit || '' };
+}
+
+function openForm(item = null, isCopy = false) {
+  editingId = isCopy ? null : (item ? item.id : null);
+  $('modalTitle').textContent = isCopy ? '复制物品' : (item ? '编辑物品' : '添加物品');
+  $('itemId').value = editingId || '';
+
+  updateAutoFillLists();
+  const defaults = !item ? getLastItemDefaults() : null;
+
+  if (item) {
+    $('name').value = item.name;
+    $('quantity').value = item.quantity;
+    $('unit').value = item.unit;
+    $('expiry').value = item.expiry;
+    $('remindDays').value = item.remindDays;
+    $('note').value = item.note;
+  } else {
+    $('name').value = '';
+    $('quantity').value = 1;
+    $('unit').value = (defaults && defaults.unit) || '个';
+    $('expiry').value = '';
+    $('remindDays').value = 30;
+    $('note').value = '';
+  }
+
+  const catSource = item ? item.category : (defaults ? defaults.category : '');
+  const [c1, c2, c3] = extractParts(catSource, CATEGORY_LEVELS);
+  $('categoryL1').value = c1 || (item ? '' : (defaults ? '' : '日用品'));
+  $('categoryL2').value = c2;
+  $('categoryL3').value = c3;
+  refreshCategoryChips();
+
+  const locSource = item ? item.location : (defaults ? defaults.location : '');
+  const [r, cab, spot] = extractParts(locSource, LOCATION_LEVELS);
+  $('locationRoom').value = r;
+  $('locationCabinet').value = cab;
+  $('locationSpot').value = spot;
+  refreshLocationChips();
+
+  $('modal').classList.remove('hidden');
+  setTimeout(() => $('name').focus(), 200);
+}
+function closeForm() { $('modal').classList.add('hidden'); }
+function changeQty(id, delta) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.quantity = Math.max(0, (Number(item.quantity) || 0) + delta);
+  item.updatedAt = new Date().toISOString();
+  saveItems();
+}
+function editItem(id) { const item = items.find(i => i.id === id); if (item) openForm(item); }
+function copyItem(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  expandedIds.add(id);
+  saveExpanded();
+  openForm(item, true);
+}
+async function deleteItem(id) {
+  const ok = await uiConfirm('确定删除这个物品？', { title: '删除物品', okText: '删除', danger: true });
+  if (!ok) return;
+  items = items.filter(i => i.id !== id);
+  expandedIds.delete(id);
+  selectedIds.delete(id);
+  saveExpanded(); saveItems();
+}
+
+function enterSelection() {
+  selectionMode = true;
+  selectedIds.clear();
+  document.body.classList.add('selecting');
+  $('btnAdd').classList.add('hidden');
+  $('btnBatch').classList.add('active');
+  render();
+}
+function exitSelection() {
+  selectionMode = false;
+  selectedIds.clear();
+  document.body.classList.remove('selecting');
+  $('btnAdd').classList.remove('hidden');
+  $('btnBatch').classList.remove('active');
+  render();
+}
+function toggleSelect(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  const card = document.querySelector(`.item-card[data-id="${id}"]`);
+  if (card) {
+    card.classList.toggle('selected', selectedIds.has(id));
+    const cb = card.querySelector('.item-checkbox');
+    if (cb) {
+      cb.classList.toggle('checked', selectedIds.has(id));
+      cb.textContent = selectedIds.has(id) ? '✓' : '';
+    }
+  }
+  updateBatchBar();
+}
+function updateBatchBar() {
+  const bar = $('batchBar');
+  if (!selectionMode) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  $('batchCount').textContent = selectedIds.size;
+}
+function batchSelectAll() {
+  const list = getFilteredItems();
+  const allSelected = list.length > 0 && list.every(i => selectedIds.has(i.id));
+  if (allSelected) list.forEach(i => selectedIds.delete(i.id));
+  else list.forEach(i => selectedIds.add(i.id));
+  renderList();
+  updateBatchBar();
+}
+async function batchDelete() {
+  if (!selectedIds.size) { showToast('请先选择物品'); return; }
+  const ok = await uiConfirm(`确定删除已选的 ${selectedIds.size} 个物品？`, { title: '批量删除', okText: '删除', danger: true });
+  if (!ok) return;
+  items = items.filter(i => !selectedIds.has(i.id));
+  selectedIds.clear();
+  saveItems();
+  renderList();
+  updateBatchBar();
+}
+function openBatchEdit(field) {
+  if (!selectedIds.size) { showToast('请先选择物品'); return; }
+  batchEditField = field;
+  const isCat = field === 'category';
+  $('batchEditTitle').textContent = isCat ? '批量修改分类' : '批量修改位置';
+  $('batchEditLabel').textContent = isCat ? '新分类' : '新位置';
+  $('batchEditInput').placeholder = isCat ? '如：日用品/清洁用品' : '如：卧室/衣柜/上层';
+  $('batchEditHint').textContent = isCat
+    ? '用 / 分隔多级分类。留空保存则清空分类。'
+    : '用 / 分隔房间/柜子/位置。留空保存则清空位置。';
+  $('batchEditInput').value = '';
+
+  const paths = isCat ? allCategoryPaths() : allLocationPaths();
+  const opts = Array.from(new Set(paths.flatMap(p => {
+    const parts = p.split('/').map(s => s.trim()).filter(Boolean);
+    const result = []; let cur = '';
+    parts.forEach(part => { cur = cur ? cur + '/' + part : part; result.push(cur); });
+    return result;
+  }))).sort();
+  renderChips($('batchEditChips'), opts, '');
+  $('batchEditChips').onclick = e => {
+    const btn = e.target.closest('.quick-chip');
+    if (!btn) return;
+    $('batchEditInput').value = btn.dataset.val;
+  };
+
+  $('batchEditModal').classList.remove('hidden');
+  setTimeout(() => $('batchEditInput').focus(), 200);
+}
+function applyBatchEdit() {
+  const val = $('batchEditInput').value.trim();
+  const field = batchEditField;
+  const now = new Date().toISOString();
+  let count = 0;
+  items.forEach(i => {
+    if (selectedIds.has(i.id)) { i[field] = val; i.updatedAt = now; count++; }
+  });
+  if (val) {
+    const arr = field === 'category' ? taxonomy.categories : taxonomy.locations;
+    const parts = val.split('/').map(s => s.trim()).filter(Boolean);
+    let cur = '';
+    parts.forEach(p => {
+      cur = cur ? cur + '/' + p : p;
+      if (!arr.includes(cur)) arr.push(cur);
+    });
+    saveTaxonomy();
+  }
+  saveItems();
+  $('batchEditModal').classList.add('hidden');
+  showToast(`已更新 ${count} 个物品`);
+}
+
+function buildCSVContent() {
+  const headers = ['名称', '分类', '位置', '数量', '单位', '到期日', '提前提醒天数', '备注', '添加时间'];
+  const rows = items.map(i => [i.name, i.category, i.location, i.quantity, i.unit, i.expiry, i.remindDays, i.note, i.createdAt]);
+  const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  return '\uFEFF' + csv;
+}
+function buildJSONContent() {
+  const data = { version: 1, exportedAt: new Date().toISOString(), items, taxonomy };
+  return JSON.stringify(data, null, 2);
+}
+function getExportFileData(format) {
+  if (format === 'csv') {
+    return {
+      filename: `储物清单_${localDateTimeStr()}.csv`,
+      content: buildCSVContent(),
+      mime: 'text/csv;charset=utf-8',
+      label: 'CSV 表格',
+      hint: '可用 Excel / 表格软件打开'
+    };
+  }
+  return {
+    filename: `储物清单备份_${localDateTimeStr()}.json`,
+    content: buildJSONContent(),
+    mime: 'application/json',
+    label: 'JSON 备份',
+    hint: '可完整恢复（推荐）'
+  };
+}
+
+let dataPanelState = {
+  format: 'json',
+  custom: null
+};
+
+function openDataPanel() {
+  dataPanelState = { format: exportFormat || 'json', custom: null };
+  const old = document.getElementById('dataModal');
+  if (old) old.remove();
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'dataModal';
+  document.body.appendChild(modal);
+  renderDataPanel();
+}
+
+function openDataPanelWithContent(content, filename, mime) {
+  dataPanelState = {
+    format: 'json',
+    custom: { content, filename, mime, label: '自动备份', hint: '来自 App 内部备份' }
+  };
+  const old = document.getElementById('dataModal');
+  if (old) old.remove();
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'dataModal';
+  document.body.appendChild(modal);
+  renderDataPanel();
+}
+
+function getCurrentFileData() {
+  if (dataPanelState.custom) return dataPanelState.custom;
+  return getExportFileData(dataPanelState.format);
+}
+
+function renderDataPanel() {
+  const modal = document.getElementById('dataModal');
+  if (!modal) return;
+
+  const fileData = getCurrentFileData();
+  const size = new Blob([fileData.content]).size;
+  const sizeText = size < 1024 ? size + ' B' : (size / 1024).toFixed(1) + ' KB';
+  const isCustom = !!dataPanelState.custom;
+
+  const tabsHtml = isCustom ? '' : `
+    <div class="data-tabs">
+      <button type="button" class="data-tab ${dataPanelState.format === 'json' ? 'active' : ''}" data-fmt="json">JSON 完整备份</button>
+      <button type="button" class="data-tab ${dataPanelState.format === 'csv' ? 'active' : ''}" data-fmt="csv">CSV 表格</button>
+    </div>
+  `;
+
+  modal.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h2>导出数据</h2>
+      <div class="data-stats">
+        <strong>${items.length}</strong> 条物品 · ${sizeText}
+      </div>
+
+      ${tabsHtml}
+      <div class="data-format-hint">${escapeHtml(fileData.hint || '')}</div>
+
+      <button type="button" class="btn-hero" id="btnDoExport">
+        📤 保存 / 分享文件
+      </button>
+
+      <div class="form-actions" style="margin-top:12px;">
+        <button type="button" class="btn" id="btnCopyExport">📋 复制内容</button>
+        <button type="button" class="btn" id="btnImportHere">📥 导入</button>
+      </div>
+
+      <div id="exportLog" style="display:none;"></div>
+
+      <details class="manual-copy-box" id="manualCopyBox">
+        <summary class="manual-copy-summary">手动复制（最稳定）</summary>
+        <div class="manual-copy-tip">
+          长按下方文本框 → <b>全选</b> → <b>复制</b>，粘贴到备忘录、微信文件传输助手等即可保存。
+        </div>
+        <textarea class="manual-copy-textarea" id="manualCopyText" readonly spellcheck="false">${escapeHtml(fileData.content)}</textarea>
+      </details>
+
+      <div class="form-actions" style="margin-top:14px;">
+        <button type="button" class="btn btn-full" id="btnCloseData">关闭</button>
+      </div>
+
+      <div class="data-footer-hint">
+        App 内会先写入内部存储，再弹系统分享面板。<br>
+        若分享失败，请用「手动复制」或「复制内容」。
+      </div>
+    </div>
+  `;
+
+  attachSwipeClose(modal, () => modal.remove());
+
+  modal.querySelectorAll('.data-tab').forEach(tab => {
+    tab.onclick = () => {
+      dataPanelState.format = tab.dataset.fmt;
+      dataPanelState.custom = null;
+      renderDataPanel();
+    };
+  });
+
+  const logEl = document.getElementById('exportLog');
+  function setLog(text, type) {
+    if (!logEl) return;
+    logEl.style.display = 'block';
+    logEl.className = 'export-log' + (type ? ' ' + type : '');
+    logEl.textContent = text;
+  }
+
+  document.getElementById('btnDoExport').onclick = async () => {
+    const fd = getCurrentFileData();
+    setLog('正在尝试保存…');
+    try {
+      const result = await tryAllSaveMethods(fd.content, fd.filename, fd.mime);
+      if (result.ok) {
+        if (result.method === 'native') {
+          setLog('✅ 已保存到 App 存储，并已弹出系统分享。', 'ok');
+          showToast('已保存');
+        } else {
+          setLog('✅ 已尝试保存（' + result.method + '）。如未看到文件，请用「手动复制」。', 'ok');
+          showToast('已尝试保存');
+        }
+        markExported();
+        return;
+      }
+      if (result.method === 'cancelled') {
+        setLog('已取消', '');
+        return;
+      }
+      setLog('⚠️ 当前环境无法直接保存文件。请用「手动复制」或分享到微信 / 网盘。', 'warn');
+    } catch (e) {
+      setLog('⚠️ 保存失败：' + (e.message || '未知错误'), 'warn');
+    }
+  };
+
+  document.getElementById('btnCopyExport').onclick = async () => {
+    const fd = getCurrentFileData();
+    try {
+      await copyToClipboard(fd.content);
+      setLog('✅ 已复制到剪贴板（' + fd.content.length + ' 字符）', 'ok');
+      showToast('已复制到剪贴板');
+      markExported();
+    } catch (e) {
+      setLog('⚠️ 复制失败，请用「手动复制」展开后长按全选。', 'warn');
+      const box = document.getElementById('manualCopyBox');
+      if (box) box.open = true;
+    }
+  };
+
+  document.getElementById('btnImportHere').onclick = () => {
+    modal.remove();
+    const input = document.getElementById('importFile');
+    if (input) input.click();
+  };
+
+  document.getElementById('btnCloseData').onclick = () => modal.remove();
+}
+
+let openAlertShown = false;
+function checkNotifications() {
+  const alerts = items.filter(i => ['expired', 'soon'].includes(expiryStatus(i).key));
+  if (!alerts.length) return;
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      new Notification('储物清单 · 到期提醒', {
+        body: alerts.slice(0, 5).map(i => `${i.name}：${expiryStatus(i).label}`).join('\n')
+      });
+    }
+  } catch (e) {}
+  if (settings.alertOnOpen) showOpenAlert(alerts);
+}
+function showOpenAlert(alerts) {
+  if (openAlertShown) return;
+  openAlertShown = true;
+
+  const expired = alerts.filter(i => expiryStatus(i).key === 'expired');
+  const soon = alerts.filter(i => expiryStatus(i).key === 'soon');
+
+  let html = '<div class="sheet-handle"></div><h2>到期提醒</h2>';
+  if (expired.length) {
+    html += `<h3>已过期（${expired.length}）</h3>`;
+    html += expired.slice(0, 8).map(i => {
+      const st = expiryStatus(i);
+      return `<div class="alert-item expired" style="margin-bottom:4px;">${escapeHtml(i.name)} · ${escapeHtml(displayPath(i.location) || '未填位置')} · ${st.label}</div>`;
+    }).join('');
+  }
+  if (soon.length) {
+    html += `<h3>临期（${soon.length}）</h3>`;
+    html += soon.slice(0, 8).map(i => {
+      const st = expiryStatus(i);
+      return `<div class="alert-item soon" style="margin-bottom:4px;">${escapeHtml(i.name)} · ${escapeHtml(displayPath(i.location) || '未填位置')} · ${st.label}</div>`;
+    }).join('');
+  }
+  if (alerts.length > 16) html += `<p class="hint">还有 ${alerts.length - 16} 项未显示。</p>`;
+  html += `<div style="margin-top:16px;">
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#6b7280; cursor:pointer; margin-bottom:12px;">
+      <input type="checkbox" id="openAlertDisable" style="width:16px; height:16px; margin:0; accent-color:#3b82f6;">
+      <span>以后打开 App 时不再自动提醒</span>
+    </label>
+    <button type="button" class="btn btn-primary btn-full" onclick="closeOpenAlert()">知道了</button>
+  </div>`;
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'openAlertModal';
+  modal.innerHTML = `<div class="sheet">${html}</div>`;
+  document.body.appendChild(modal);
+  attachSwipeClose(modal, closeOpenAlert);
+}
+function closeOpenAlert() {
+  const cb = document.getElementById('openAlertDisable');
+  if (cb && cb.checked) { settings.alertOnOpen = false; saveSettings(); }
+  const m = document.getElementById('openAlertModal');
+  if (m) m.remove();
+}
+
+function attachSwipeClose(modal, onClose) {
+  const sheet = modal.querySelector('.sheet');
+  if (!sheet || sheet.dataset.swipeAttached === '1') return;
+  sheet.dataset.swipeAttached = '1';
+
+  let startY = 0, currentY = 0, isDragging = false;
+  const THRESHOLD = 100;
+
+  sheet.addEventListener('touchstart', (e) => {
+    if (sheet.scrollTop > 0) return;
+    startY = e.touches[0].clientY;
+    currentY = startY;
+    isDragging = true;
+    sheet.style.transition = 'none';
+  }, { passive: true });
+
+  sheet.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    currentY = e.touches[0].clientY;
+    const delta = currentY - startY;
+    if (delta > 0 && sheet.scrollTop <= 0) {
+      sheet.style.transform = `translateY(${delta}px)`;
+      if (e.cancelable) e.preventDefault();
+    } else {
+      sheet.style.transform = '';
+    }
+  }, { passive: false });
+
+  const endDrag = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    const delta = currentY - startY;
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+    if (delta > THRESHOLD) {
+      if (typeof onClose === 'function') onClose();
+      else modal.classList.add('hidden');
+    }
+  };
+
+  sheet.addEventListener('touchend', endDrag);
+  sheet.addEventListener('touchcancel', () => {
+    isDragging = false;
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+  });
+}
+
+$('itemForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const category = joinParts([$('categoryL1').value, $('categoryL2').value, $('categoryL3').value]);
+  const location = joinParts([$('locationRoom').value, $('locationCabinet').value, $('locationSpot').value]);
+  const data = {
+    name: $('name').value.trim(), category, location,
+    quantity: Number($('quantity').value) || 0, unit: $('unit').value.trim(),
+    expiry: $('expiry').value, remindDays: Number($('remindDays').value) || 0,
+    note: $('note').value.trim()
+  };
+  if (!data.name) { showToast('请填写名称'); return; }
+
+  if (category) {
+    const parts = category.split('/').map(s => s.trim()).filter(Boolean);
+    let cur = '';
+    parts.forEach(p => { cur = cur ? cur + '/' + p : p; if (!taxonomy.categories.includes(cur)) taxonomy.categories.push(cur); });
+  }
+  if (location) {
+    const parts = location.split('/').map(s => s.trim()).filter(Boolean);
+    let cur = '';
+    parts.forEach(p => { cur = cur ? cur + '/' + p : p; if (!taxonomy.locations.includes(cur)) taxonomy.locations.push(cur); });
+  }
+  saveTaxonomy();
+
+  if (editingId) {
+    const idx = items.findIndex(i => i.id === editingId);
+    if (idx >= 0) items[idx] = { ...items[idx], ...data, updatedAt: new Date().toISOString() };
+  } else {
+    items.push({ id: uid(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+  }
+  saveItems(); closeForm(); takeSnapshot('manual'); lastSnapshotAt = Date.now();
+  showToast(editingId ? '已保存' : '已添加');
+});
+
+$('btnAdd').addEventListener('click', () => openForm());
+$('btnCancel').addEventListener('click', closeForm);
+$('search').addEventListener('input', renderList);
+
+$('btnFilterCategory').addEventListener('click', () => openFilterModal('category'));
+$('btnFilterLocation').addEventListener('click', () => openFilterModal('location'));
+$('btnFilterExpiry').addEventListener('click', () => openFilterModal('expiry'));
+
+$('categoryL1').addEventListener('input', refreshCategoryChips);
+$('categoryL2').addEventListener('input', refreshCategoryChips);
+$('categoryL3').addEventListener('input', refreshCategoryChips);
+bindChipBox('categoryL1Chips', 'categoryL1', refreshCategoryChips);
+bindChipBox('categoryL2Chips', 'categoryL2', refreshCategoryChips);
+bindChipBox('categoryL3Chips', 'categoryL3', refreshCategoryChips);
+
+$('locationRoom').addEventListener('input', refreshLocationChips);
+$('locationCabinet').addEventListener('input', refreshLocationChips);
+$('locationSpot').addEventListener('input', refreshLocationChips);
+bindChipBox('locationRoomChips', 'locationRoom', refreshLocationChips);
+bindChipBox('locationCabinetChips', 'locationCabinet', refreshLocationChips);
+bindChipBox('locationSpotChips', 'locationSpot', refreshLocationChips);
+
+$('btnBatch').addEventListener('click', () => {
+  if (selectionMode) exitSelection();
+  else enterSelection();
+});
+$('btnBatchSelectAll').addEventListener('click', batchSelectAll);
+$('btnBatchCancel').addEventListener('click', exitSelection);
+$('btnBatchDelete').addEventListener('click', batchDelete);
+$('btnBatchCategory').addEventListener('click', () => openBatchEdit('category'));
+$('btnBatchLocation').addEventListener('click', () => openBatchEdit('location'));
+$('btnBatchEditCancel').addEventListener('click', () => $('batchEditModal').classList.add('hidden'));
+$('btnBatchEditConfirm').addEventListener('click', applyBatchEdit);
+
+function updateNotifyUI() {
+  const sw = $('notifySwitch');
+  if (sw) sw.classList.toggle('on', !!settings.alertOnOpen);
+}
+$('btnMenu').addEventListener('click', () => {
+  updateNotifyUI();
+  $('menuModal').classList.remove('hidden');
+});
+$('btnCloseMenu').addEventListener('click', () => $('menuModal').classList.add('hidden'));
+
+$('btnNotify').addEventListener('click', async () => {
+  settings.alertOnOpen = !settings.alertOnOpen;
+  saveSettings();
+  updateNotifyUI();
+  if (!settings.alertOnOpen) { showToast('已关闭到期提醒'); return; }
+  let sysOK = false;
+  if (typeof Notification !== 'undefined') {
+    try {
+      const perm = await Notification.requestPermission();
+      sysOK = perm === 'granted';
+    } catch (e) {}
+  }
+  if (sysOK) { showToast('已开启：系统通知 + 打开提醒'); checkNotifications(); }
+  else { showToast('已开启「打开 App 时提醒」'); }
+});
+
+$('btnManage').addEventListener('click', () => {
+  $('menuModal').classList.add('hidden');
+  $('manageAddInput').value = '';
+  renderManage();
+  $('manageModal').classList.remove('hidden');
+});
+$('btnCloseManage').addEventListener('click', () => $('manageModal').classList.add('hidden'));
+
+$('btnExport').addEventListener('click', () => {
+  $('menuModal').classList.add('hidden');
+  openDataPanel();
+});
+
+$('importFile').addEventListener('change', e => {
+  const inputEl = e.target;
+  const file = inputEl.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const imported = Array.isArray(data) ? data : data.items;
+      if (!Array.isArray(imported)) throw new Error('格式不对');
+
+      const choice = await uiDialog({
+        title: '导入数据',
+        message: `共 ${imported.length} 条数据。\n· 覆盖：清空当前数据后导入\n· 合并：保留现有数据，相同 ID 会被更新`,
+        buttons: [
+          { text: '取消', value: 'cancel' },
+          { text: '合并', value: 'merge' },
+          { text: '覆盖', value: 'replace', primary: true }
+        ]
+      });
+
+      if (choice === 'cancel' || choice === null) {
+        showToast('已取消导入');
+        inputEl.value = '';
+        return;
+      }
+
+      takeSnapshot('manual');
+
+      if (choice === 'replace') {
+        items = imported;
+        if (data.taxonomy) {
+          taxonomy = {
+            categories: Array.isArray(data.taxonomy.categories) ? data.taxonomy.categories : [],
+            locations: Array.isArray(data.taxonomy.locations) ? data.taxonomy.locations : []
+          };
+          saveTaxonomy();
+        }
+      } else {
+        const map = new Map(items.map(i => [i.id, i]));
+        imported.forEach(i => { if (!i.id) i.id = uid(); map.set(i.id, i); });
+        items = Array.from(map.values());
+        if (data.taxonomy) {
+          if (Array.isArray(data.taxonomy.categories)) {
+            data.taxonomy.categories.forEach(p => { if (!taxonomy.categories.includes(p)) taxonomy.categories.push(p); });
+          }
+          if (Array.isArray(data.taxonomy.locations)) {
+            data.taxonomy.locations.forEach(p => { if (!taxonomy.locations.includes(p)) taxonomy.locations.push(p); });
+          }
+          saveTaxonomy();
+        }
+      }
+
+      saveItems(); takeSnapshot('manual');
+      $('menuModal').classList.add('hidden');
+      showToast('导入完成');
+    } catch (err) {
+      showToast('导入失败：' + err.message);
+    }
+    inputEl.value = '';
+  };
+  reader.readAsText(file);
+});
+
+$('btnBackupManage').addEventListener('click', () => {
+  $('menuModal').classList.add('hidden');
+  $('chkAutoDownload').checked = settings.autoDownloadOnExit;
+  renderAutoBackup();
+  renderSnapshots();
+  $('backupModal').classList.remove('hidden');
+});
+$('chkAutoDownload').addEventListener('change', e => { settings.autoDownloadOnExit = e.target.checked; saveSettings(); });
+$('btnSnapNow').addEventListener('click', () => { takeSnapshot('manual'); lastSnapshotAt = Date.now(); renderSnapshots(); showToast('快照已创建'); });
+$('btnCloseBackup').addEventListener('click', () => $('backupModal').classList.add('hidden'));
+
+$('btnClear').addEventListener('click', async () => {
+  const ok1 = await uiConfirm('确定清空所有物品？建议先导出备份。', { title: '清空数据', okText: '继续', danger: true });
+  if (!ok1) return;
+  const ok2 = await uiConfirm('再次确认：清空后无法恢复。', { title: '再次确认', okText: '清空', danger: true });
+  if (!ok2) return;
+  takeSnapshot('manual'); items = [];
+  expandedIds.clear(); selectedIds.clear();
+  saveExpanded(); saveItems(); renderSnapshots();
+  $('menuModal').classList.add('hidden');
+  showToast('已清空');
+});
+
+/* ===================== 启动 ===================== */
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+document.querySelectorAll('.modal:not(.dialog-center)').forEach(m => attachSwipeClose(m));
+
+render();
+setTimeout(checkNotifications, 1000);
+takeSnapshot('init');
+lastSnapshotAt = Date.now();
+
+console.log('[储物清单] Capacitor 环境：', isCapacitor);
+</script>
+</body>
+</html>
